@@ -1,61 +1,47 @@
-extern crate glutin_window;
-extern crate graphics;
-extern crate opengl_graphics;
-extern crate piston;
-extern crate find_folder;
-
-use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{GlGraphics, OpenGL};
-use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
-use piston::window::WindowSettings;
 use std::process;
+use std::fs;
 use std::io::prelude::*;
 use std::io;
 
-pub struct App {
-    gl: GlGraphics, // OpenGL drawing backend.
-    clues: Vec<Vec<u32>>,  // Sudoku clues.
+fn main() {
+    let grid_len = 9;
+    let mut grid: Vec<Vec<u32>> = vec![vec![0; 9]; 9];
+    let mode = read_mode().chars().next().unwrap();
+    
+    if mode == '1' {
+        grid = grid_file(grid_len);
+    } else if mode == '2' {
+        grid = grid_input(grid_len);
+    }
+
+    let grid_solve = grid.clone();
+    let is_solved = solve(grid_solve, grid_len);
+    if !is_solved {
+        print!("Cannot be solved!");
+    }
+    process::exit(0);
 }
 
-impl App {
-    fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
-
-        const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-
-        let radius = 1.0;
-        let grid_len = 9.0;
-        let font_size = 2;
-        let grid = self.clues.clone();
-
-        self.gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen.
-            clear(WHITE, gl);
-
-            let transform = c
-                .transform;
-
-            for i in 0..grid_len as u32 {
-                let i = i as f64;
-                let foreach_w = i * (args.window_size[0] / grid_len);
-                let foreach_h = i * (args.window_size[1] / grid_len);
-                line(BLACK, radius, [foreach_w, 0.0, foreach_w, args.window_size[1]], transform, gl);
-                line(BLACK, radius, [0.0, foreach_h, args.window_size[0], foreach_h], transform, gl);
+fn read_mode() -> String {
+    let mut mode = String::new();
+    loop {
+        println!("Enter input mode: [1]File, [2]Stdin");
+        io::stdout().flush().expect("Could not flush stdout");
+        io::stdin()
+            .read_line(&mut mode)
+            .ok()
+            .expect("Read error");
+        trim_newline(&mut mode);
+        match mode.len() {
+            0 => continue,
+            1 => break,
+            _ => {
+                println!("Please enter a single number.");
+                mode.clear();  // clear contents, otherwise read_line will append on user input
             }
-
-            for i in 0..grid.len() {
-                for j in 0..grid[i].len() {
-                    text::Text::new(font_size)
-                        .draw();
-                }
-            }
-        });
+        }
     }
-
-    fn update(&mut self, args: &UpdateArgs) {
-    }
+    return mode;
 }
 
 fn trim_newline(s: &mut String) {
@@ -64,59 +50,116 @@ fn trim_newline(s: &mut String) {
     }
 }
 
-fn main() {
-    // Change this to OpenGL::V2_1 if not working.
-    let opengl = OpenGL::V2_1;
+fn grid_file(grid_len:usize) -> Vec<Vec<u32>> {
+    let grid: Vec<Vec<u32>> = vec![];
+    let mut filename = String::new();
 
-    let mut clue = String::new();
+    // Read file for Sudoku clues
+    println!("Enter file location:");
+    io::stdout().flush().expect("Could not flush stdout");
+    io::stdin()
+        .read_line(&mut filename)
+        .ok()
+        .expect("Read error");
+    trim_newline(&mut filename);
+    let contents = fs::read_to_string(filename)
+        .expect("File read error");
+    let grid = contents.lines().map(|line| {
+        line.split_whitespace().filter_map(|w| w.parse().ok()).collect()
+    }).collect();
+    return grid;
+}
+
+fn grid_input(grid_len:usize) -> Vec<Vec<u32>> {
+    let mut grid: Vec<Vec<u32>> = vec![];
 
     // Read stdin for Sudoku clues
-    print!("Enter clues: ");
+    println!("Enter initial Sudoku puzzle 9x9 matrix delimited by spaces and newlines:");
     io::stdout().flush().expect("Could not flush stdout");
-    io::stdin().read_line(&mut clue)
-        .expect("Failed to read line");
-    trim_newline(&mut clue);
-
-    // Check for clues size
-    if clue.len() > 81 {
-        process::exit(1);
+    for i in 0..grid_len {
+        let mut numbers = String::new();
+        io::stdin()
+            .read_line(&mut numbers)
+            .ok()
+            .expect("Read error");
+	grid.push(numbers
+	    .split_whitespace()
+            .filter_map(|w| w.parse().ok())
+	    .collect());
+        assert!(grid[i].len() == 9);
     }
-    while clue.len() < 81 {
-        clue.push('0');
-    }
 
-    // Convert clues string into list of list of u32
-    let grid_chars: Vec<char> = clue.to_string().chars().collect();
-    let grid_intlen = 9;
-    let mut grid = vec![vec![0; grid_intlen]; grid_intlen];
-    for i in 0..grid_intlen {
-        for j in 0..grid_intlen {
-            grid[i][j] = grid_chars[i+j] as u32;
+    return grid;
+}
+
+fn solve(bo:Vec<Vec<u32>>, grid_len:usize) -> bool {
+    let mut coord:Vec<u32> = vec![100, 100];
+    let find = find_empty(bo.clone());
+    let mut bo2 = bo.clone();
+    if find[0] == 100 || find[1] == 100 {  //if find is None or False
+        return true;
+    } else {
+        coord = find;
+    }
+    for num in 1..10 {
+        if valid(bo2.clone(), num, coord.clone()) {
+            bo2[coord[0] as usize][coord[1] as usize] = num;
+            if solve(bo2.clone(), grid_len) {
+                printboard(bo2.clone(), grid_len);
+                process::exit(0);
+            }
+            bo2[coord[0] as usize][coord[1] as usize] = 0;
         }
     }
+    return false;
+}
 
-    // Create an Glutin window.
-    let mut window: Window = WindowSettings::new("sudoku-solver", [600, 600])
-        .graphics_api(opengl)
-        .exit_on_esc(true)
-        .build()
-        .unwrap();
-
-    // Create a new game and run it.
-    let mut app = App {
-        gl: GlGraphics::new(opengl),
-        clues: grid,
-    };
-
-    let mut events = Events::new(EventSettings::new());
-    while let Some(e) = events.next(&mut window) {
-        if let Some(args) = e.render_args() {
-            app.render(&args);
-        }
-
-        if let Some(args) = e.update_args() {
-            app.update(&args);
+fn valid(bo:Vec<Vec<u32>>, num:u32, pos:Vec<u32>) -> bool {
+    // Check row
+    for i in 0..bo[0].len() {
+        if bo[pos[0] as usize][i] == num && pos[1] != i as u32 {
+            return false;
         }
     }
+    // Check column
+    for i in 0..bo.len() {
+        if bo[i][pos[1] as usize] == num && pos[0] != i as u32 {
+            return false;
+        }
+    }
+    // Check box
+    let box_x = pos[1] / 3;
+    let box_y = pos[0] / 3;
+    for i in box_y*3..(box_y*3 + 3) {
+        for j in box_x*3..(box_x*3 + 3) {
+            if bo[i as usize][j as usize] == num && pos != vec![i, j] {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+fn find_empty(bo:Vec<Vec<u32>>) -> Vec<u32> {
+    for i in 0..bo.len() {
+        for j in 0..bo[0].len() {
+            if bo[i][j] == 0 {
+                let coord = vec![i as u32, j as u32];
+                return coord;   //row, column
+            }
+        }
+    }
+    return vec![100, 100];
+}
+
+fn printboard(grid:Vec<Vec<u32>>, grid_len:usize) {
+    println!("\nAnswer:");
+    for i in 0..grid_len {
+        for j in 0..grid_len {
+            print!("{} ", grid[i][j]);
+        }
+        println!(" ");
+    }
+    return;
 }
 
