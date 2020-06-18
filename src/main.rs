@@ -4,24 +4,38 @@ use std::io::prelude::*;
 use std::io;
 
 fn main() {
+    // Solve 9x9 Sudoku grids
     let grid_len = 9;
+    // Initialize Sudoku grid with 0s
     let mut grid: Vec<Vec<u32>> = vec![vec![0; 9]; 9];
+    // Read Stdin for mode of input
     let mode = read_mode().chars().next().unwrap();
     
+    // [1] : File input
+    // [2] : Stdin input
+    // Loading of Sudoku grid with clues and empty as 0s
     if mode == '1' {
         grid = grid_file(grid_len);
     } else if mode == '2' {
         grid = grid_input(grid_len);
+    } else {
+        print!("Input error");
+        process::exit(0);
     }
 
+    // Prevent reimplementations of Copy
     let grid_solve = grid.clone();
+    // Solve Sudoku grid
     let is_solved = solve(grid_solve, grid_len);
+    // If cannot be solved
     if !is_solved {
         print!("Cannot be solved!");
     }
     process::exit(0);
 }
 
+// Reads mode from input
+// Checks for single character input
 fn read_mode() -> String {
     let mut mode = String::new();
     loop {
@@ -44,17 +58,19 @@ fn read_mode() -> String {
     return mode;
 }
 
+// Trims newline character from Stdin String
 fn trim_newline(s: &mut String) {
     while s.ends_with('\n') || s.ends_with('\r') {
         s.pop();
     }
 }
 
+// Read Sudoku clues from file location
+// Parses file into List of List of ints
 fn grid_file(grid_len:usize) -> Vec<Vec<u32>> {
     let grid: Vec<Vec<u32>> = vec![];
     let mut filename = String::new();
 
-    // Read file for Sudoku clues
     println!("Enter file location:");
     io::stdout().flush().expect("Could not flush stdout");
     io::stdin()
@@ -70,6 +86,8 @@ fn grid_file(grid_len:usize) -> Vec<Vec<u32>> {
     return grid;
 }
 
+// Read Sudoku clues from stdin
+// Parses stdin into List of List of ints
 fn grid_input(grid_len:usize) -> Vec<Vec<u32>> {
     let mut grid: Vec<Vec<u32>> = vec![];
 
@@ -88,32 +106,41 @@ fn grid_input(grid_len:usize) -> Vec<Vec<u32>> {
 	    .collect());
         assert!(grid[i].len() == 9);
     }
-
     return grid;
 }
 
+// Solve recursive function for backtrace algorithm
 fn solve(bo:Vec<Vec<u32>>, grid_len:usize) -> bool {
+    // Initialize (x, y) as List of ints
+    // where (100, 100) means the found (x, y) is filled 
     let mut coord:Vec<u32> = vec![100, 100];
     let find = find_empty(bo.clone());
     let mut bo2 = bo.clone();
-    if find[0] == 100 || find[1] == 100 {  //if find is None or False
+    if find[0] == 100 || find[1] == 100 {
         return true;
     } else {
+        // Need to find the number that fits (x, y)
         coord = find;
     }
     for num in 1..10 {
+        // Check if num is valid within the Sudoku rules
         if valid(bo2.clone(), num, coord.clone()) {
+            // Initialize (x, y) as valid num
             bo2[coord[0] as usize][coord[1] as usize] = num;
+            // Check if valid num in (x, y) is valid for following iterations
             if solve(bo2.clone(), grid_len) {
+                // Solution found where (x, y) is valid
                 printboard(bo2.clone(), grid_len);
                 process::exit(0);
             }
+            // Replace (x, y) as empty to backtrace
             bo2[coord[0] as usize][coord[1] as usize] = 0;
         }
     }
     return false;
 }
 
+// Checks if number is valid with the Sudoku rules at (x, y)
 fn valid(bo:Vec<Vec<u32>>, num:u32, pos:Vec<u32>) -> bool {
     // Check row
     for i in 0..bo[0].len() {
@@ -140,18 +167,21 @@ fn valid(bo:Vec<Vec<u32>>, num:u32, pos:Vec<u32>) -> bool {
     return true;
 }
 
+// Finds next empty box within the Sudoku grid to be filled
 fn find_empty(bo:Vec<Vec<u32>>) -> Vec<u32> {
     for i in 0..bo.len() {
         for j in 0..bo[0].len() {
             if bo[i][j] == 0 {
                 let coord = vec![i as u32, j as u32];
-                return coord;   //row, column
+                return coord;   // (x, y) is empty
             }
         }
     }
-    return vec![100, 100];
+    return vec![100, 100];  // (x, y) is filled
 }
 
+// Solution is found
+// Prints the Sudoku grid as the solution
 fn printboard(grid:Vec<Vec<u32>>, grid_len:usize) {
     println!("\nAnswer:");
     for i in 0..grid_len {
@@ -162,4 +192,3 @@ fn printboard(grid:Vec<Vec<u32>>, grid_len:usize) {
     }
     return;
 }
-
