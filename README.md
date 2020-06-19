@@ -1,5 +1,5 @@
 # Sudoku-solver
-[![](https://img.shields.io/badge/Category-Applications%20in%20Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Language-Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Version-0.1.0-E5A505?style=flat-square&color=green)]()
+[![](https://img.shields.io/badge/Category-Applications%20in%20Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Language-Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Version-0.1.1-E5A505?style=flat-square&color=green)]()
 
 Sudoku Solver in Rust
 

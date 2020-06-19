@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 use std::process;
 use std::fs;
 use std::io::prelude::*;
@@ -7,7 +9,7 @@ fn main() {
     // Solve 9x9 Sudoku grids
     let grid_len = 9;
     // Initialize Sudoku grid with 0s
-    let mut grid: Vec<Vec<u32>> = vec![vec![0; 9]; 9];
+    let mut grid: Vec<usize> = vec![0; grid_len * grid_len];
     // Read Stdin for mode of input
     let mode = read_mode().chars().next().unwrap();
     
@@ -66,9 +68,9 @@ fn trim_newline(s: &mut String) {
 }
 
 // Read Sudoku clues from file location
-// Parses file into List of List of ints
-fn grid_file(grid_len:usize) -> Vec<Vec<u32>> {
-    let grid: Vec<Vec<u32>> = vec![];
+// Parses file into List of ints
+fn grid_file(grid_len:usize) -> Vec<usize> {
+    let mut grid: Vec<usize> = vec![];
     let mut filename = String::new();
 
     println!("Enter file location:");
@@ -80,41 +82,46 @@ fn grid_file(grid_len:usize) -> Vec<Vec<u32>> {
     trim_newline(&mut filename);
     let contents = fs::read_to_string(filename)
         .expect("File read error");
-    let grid = contents.lines().map(|line| {
+    let cont_grid: Vec<Vec<usize>> = contents.lines().map(|line| {
         line.split_whitespace().filter_map(|w| w.parse().ok()).collect()
     }).collect();
+    for i in cont_grid {
+        grid.extend(i);
+    }
+    assert!(grid.len() == grid_len * grid_len);
     return grid;
 }
 
 // Read Sudoku clues from stdin
-// Parses stdin into List of List of ints
-fn grid_input(grid_len:usize) -> Vec<Vec<u32>> {
-    let mut grid: Vec<Vec<u32>> = vec![];
+// Parses stdin into List of ints
+fn grid_input(grid_len:usize) -> Vec<usize> {
+    let mut grid: Vec<usize> = vec![];
 
     // Read stdin for Sudoku clues
     println!("Enter initial Sudoku puzzle 9x9 matrix delimited by spaces and newlines:");
     io::stdout().flush().expect("Could not flush stdout");
-    for i in 0..grid_len {
+    for _ in 0..grid_len {
         let mut numbers = String::new();
         io::stdin()
             .read_line(&mut numbers)
             .ok()
             .expect("Read error");
-	grid.push(numbers
+	let input_grid: Vec<usize> = numbers
 	    .split_whitespace()
             .filter_map(|w| w.parse().ok())
-	    .collect());
-        assert!(grid[i].len() == 9);
+	    .collect();
+        grid.extend(input_grid);
     }
+    assert!(grid.len() == grid_len * grid_len);
     return grid;
 }
 
 // Solve recursive function for backtrace algorithm
-fn solve(bo:Vec<Vec<u32>>, grid_len:usize) -> bool {
+fn solve(bo:Vec<usize>, grid_len:usize) -> bool {
     // Initialize (x, y) as List of ints
     // where (100, 100) means the found (x, y) is filled 
-    let mut coord:Vec<u32> = vec![100, 100];
-    let find = find_empty(bo.clone());
+    let mut coord:Vec<usize> = vec![100, 100];
+    let find = find_empty(bo.clone(), grid_len);
     let mut bo2 = bo.clone();
     if find[0] == 100 || find[1] == 100 {
         return true;
@@ -122,11 +129,11 @@ fn solve(bo:Vec<Vec<u32>>, grid_len:usize) -> bool {
         // Need to find the number that fits (x, y)
         coord = find;
     }
-    for num in 1..10 {
+    for num in 1..(grid_len+1) {
         // Check if num is valid within the Sudoku rules
-        if valid(bo2.clone(), num, coord.clone()) {
+        if valid(bo2.clone(), num, coord.clone(), grid_len) {
             // Initialize (x, y) as valid num
-            bo2[coord[0] as usize][coord[1] as usize] = num;
+            bo2[coord[0]*grid_len + coord[1]] = num;
             // Check if valid num in (x, y) is valid for following iterations
             if solve(bo2.clone(), grid_len) {
                 // Solution found where (x, y) is valid
@@ -134,23 +141,23 @@ fn solve(bo:Vec<Vec<u32>>, grid_len:usize) -> bool {
                 process::exit(0);
             }
             // Replace (x, y) as empty to backtrace
-            bo2[coord[0] as usize][coord[1] as usize] = 0;
+            bo2[coord[0]*grid_len + coord[1]] = 0;
         }
     }
     return false;
 }
 
-// Checks if number is valid with the Sudoku rules at (x, y)
-fn valid(bo:Vec<Vec<u32>>, num:u32, pos:Vec<u32>) -> bool {
+// Checks if number is valid within the Sudoku rules at (x, y)
+fn valid(bo:Vec<usize>, num:usize, pos:Vec<usize>, grid_len:usize) -> bool {
     // Check row
-    for i in 0..bo[0].len() {
-        if bo[pos[0] as usize][i] == num && pos[1] != i as u32 {
+    for i in 0..grid_len {
+        if bo[pos[0]*grid_len + i] == num && pos[1] != i {
             return false;
         }
     }
     // Check column
-    for i in 0..bo.len() {
-        if bo[i][pos[1] as usize] == num && pos[0] != i as u32 {
+    for i in 0..grid_len {
+        if bo[i*grid_len + pos[1]] == num && pos[0] != i {
             return false;
         }
     }
@@ -159,7 +166,7 @@ fn valid(bo:Vec<Vec<u32>>, num:u32, pos:Vec<u32>) -> bool {
     let box_y = pos[0] / 3;
     for i in box_y*3..(box_y*3 + 3) {
         for j in box_x*3..(box_x*3 + 3) {
-            if bo[i as usize][j as usize] == num && pos != vec![i, j] {
+            if bo[i*grid_len + j] == num && pos != vec![i, j] {
                 return false;
             }
         }
@@ -168,11 +175,11 @@ fn valid(bo:Vec<Vec<u32>>, num:u32, pos:Vec<u32>) -> bool {
 }
 
 // Finds next empty box within the Sudoku grid to be filled
-fn find_empty(bo:Vec<Vec<u32>>) -> Vec<u32> {
-    for i in 0..bo.len() {
-        for j in 0..bo[0].len() {
-            if bo[i][j] == 0 {
-                let coord = vec![i as u32, j as u32];
+fn find_empty(bo:Vec<usize>, grid_len:usize) -> Vec<usize> {
+    for i in 0..grid_len {
+        for j in 0..grid_len {
+            if bo[i*grid_len + j] == 0 {
+                let coord = vec![i, j];
                 return coord;   // (x, y) is empty
             }
         }
@@ -182,11 +189,11 @@ fn find_empty(bo:Vec<Vec<u32>>) -> Vec<u32> {
 
 // Solution is found
 // Prints the Sudoku grid as the solution
-fn printboard(grid:Vec<Vec<u32>>, grid_len:usize) {
+fn printboard(grid:Vec<usize>, grid_len:usize) {
     println!("\nAnswer:");
     for i in 0..grid_len {
         for j in 0..grid_len {
-            print!("{} ", grid[i][j]);
+            print!("{} ", grid[i*grid_len + j]);
         }
         println!(" ");
     }
