@@ -25,10 +25,8 @@ fn main() {
         process::exit(0);
     }
 
-    // Prevent reimplementations of Copy
-    let grid_solve = grid.clone();
     // Solve Sudoku grid
-    let is_solved = solve(grid_solve, grid_len);
+    let is_solved = solve(&mut grid, grid_len);
     // If cannot be solved
     if !is_solved {
         print!("Cannot be solved!");
@@ -117,12 +115,11 @@ fn grid_input(grid_len:usize) -> Vec<usize> {
 }
 
 // Solve recursive function for backtrace algorithm
-fn solve(bo:Vec<usize>, grid_len:usize) -> bool {
+fn solve(bo:&mut Vec<usize>, grid_len:usize) -> bool {
     // Initialize (x, y) as List of ints
     // where (100, 100) means the found (x, y) is filled 
     let mut coord:Vec<usize> = vec![100, 100];
-    let find = find_empty(bo.clone(), grid_len);
-    let mut bo2 = bo.clone();
+    let find = find_empty(bo, grid_len);
     if find[0] == 100 || find[1] == 100 {
         return true;
     } else {
@@ -131,24 +128,24 @@ fn solve(bo:Vec<usize>, grid_len:usize) -> bool {
     }
     for num in 1..(grid_len+1) {
         // Check if num is valid within the Sudoku rules
-        if valid(bo2.clone(), num, coord.clone(), grid_len) {
+        if valid(bo, num, &mut coord, grid_len) {
             // Initialize (x, y) as valid num
-            bo2[coord[0]*grid_len + coord[1]] = num;
+            bo[coord[0]*grid_len + coord[1]] = num;
             // Check if valid num in (x, y) is valid for following iterations
-            if solve(bo2.clone(), grid_len) {
+            if solve(bo, grid_len) {
                 // Solution found where (x, y) is valid
-                printboard(bo2.clone(), grid_len);
+                printboard(bo, grid_len);
                 process::exit(0);
             }
             // Replace (x, y) as empty to backtrace
-            bo2[coord[0]*grid_len + coord[1]] = 0;
+            bo[coord[0]*grid_len + coord[1]] = 0;
         }
     }
     return false;
 }
 
 // Checks if number is valid within the Sudoku rules at (x, y)
-fn valid(bo:Vec<usize>, num:usize, pos:Vec<usize>, grid_len:usize) -> bool {
+fn valid(bo:&mut Vec<usize>, num:usize, pos:&mut Vec<usize>, grid_len:usize) -> bool {
     // Check row
     for i in 0..grid_len {
         if bo[pos[0]*grid_len + i] == num && pos[1] != i {
@@ -166,7 +163,7 @@ fn valid(bo:Vec<usize>, num:usize, pos:Vec<usize>, grid_len:usize) -> bool {
     let box_y = pos[0] / 3;
     for i in box_y*3..(box_y*3 + 3) {
         for j in box_x*3..(box_x*3 + 3) {
-            if bo[i*grid_len + j] == num && pos != vec![i, j] {
+            if bo[i*grid_len + j] == num && pos[0] != i && pos[1] != j {
                 return false;
             }
         }
@@ -175,7 +172,7 @@ fn valid(bo:Vec<usize>, num:usize, pos:Vec<usize>, grid_len:usize) -> bool {
 }
 
 // Finds next empty box within the Sudoku grid to be filled
-fn find_empty(bo:Vec<usize>, grid_len:usize) -> Vec<usize> {
+fn find_empty(bo:&mut Vec<usize>, grid_len:usize) -> Vec<usize> {
     for i in 0..grid_len {
         for j in 0..grid_len {
             if bo[i*grid_len + j] == 0 {
@@ -189,7 +186,7 @@ fn find_empty(bo:Vec<usize>, grid_len:usize) -> Vec<usize> {
 
 // Solution is found
 // Prints the Sudoku grid as the solution
-fn printboard(grid:Vec<usize>, grid_len:usize) {
+fn printboard(grid:&mut Vec<usize>, grid_len:usize) {
     println!("\nAnswer:");
     for i in 0..grid_len {
         for j in 0..grid_len {
