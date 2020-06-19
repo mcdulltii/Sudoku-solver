@@ -1,5 +1,5 @@
 # Sudoku-solver
-[![](https://img.shields.io/badge/Category-Applications%20in%20Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Language-Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Version-0.1.2-E5A505?style=flat-square&color=green)]()
+[![](https://img.shields.io/badge/Category-Applications%20in%20Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Language-Rust-E5A505?style=flat-square)]() [![](https://img.shields.io/badge/Version-0.2.0-E5A505?style=flat-square&color=green)]()
 
 Sudoku Solver in Rust
 
@@ -43,9 +43,28 @@ src/sudoku
 <Answer outputted>
 ```
 
+- Calculate runtime of Sudoku solve by `make timed`
+
+```shell
+> make timed
+    .
+    .
+    .
+Enter input mode: [1]File, [2]Stdin:
+1
+Enter file location:
+src/sudoku
+
+<Answer outputted>
+
+Elapsed time: {Time taken to solve puzzle}ms
+```
+
 ## Makefile
 
 - `make` or `make compile` to run the binary executable
+
+- `make timed` to run the binary executable with a solve timer
 
 - `make build` to only build the binary executable in ./target/ directory
 
@@ -56,7 +75,7 @@ src/sudoku
 ## References
 
 - Wikipedia
-  
+
   - Optimized Sudoku solving algorithms
 
 - Backtracing algorithm
